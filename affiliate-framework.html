@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affiliate Framework — Shopee Affiliate System</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070709;
+  --surface: #0e0e12;
+  --surface2: #16161d;
+  --border: #23232e;
+  --accent: #f97316;
+  --accent2: #fb923c;
+  --gold: #f59e0b;
+  --green: #22c55e;
+  --blue: #38bdf8;
+  --text: #f1f1f3;
+  --muted: #64647a;
+  --muted2: #44445a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Grain overlay ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 1000; opacity: 0.4;
+}
+
+/* ── Ambient blobs ── */
+.blob {
+  position: fixed; border-radius: 50%; filter: blur(120px);
+  pointer-events: none; z-index: 0;
+}
+.blob-1 { width: 500px; height: 500px; background: rgba(249,115,22,0.06); top: -100px; right: -100px; }
+.blob-2 { width: 400px; height: 400px; background: rgba(34,197,94,0.04); bottom: 20%; left: -100px; }
+.blob-3 { width: 300px; height: 300px; background: rgba(56,189,248,0.04); bottom: -50px; right: 20%; }
+
+/* ── Header ── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(24px);
+  background: rgba(7,7,9,0.8);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem; letter-spacing: 0.08em;
+  color: var(--text);
+}
+.logo span { color: var(--accent); }
+.progress-wrap {
+  display: flex; align-items: center; gap: 12px;
+}
+.progress-label { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+.progress-bar {
+  width: 160px; height: 4px;
+  background: var(--border); border-radius: 99px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+.progress-count {
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--accent);
+}
+
+/* ── Hero ── */
+.hero {
+  text-align: center;
+  padding: 80px 24px 60px;
+  position: relative; z-index: 1;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(249,115,22,0.1);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 99px;
+  padding: 6px 16px;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.hero-eyebrow::before { content: '◆'; font-size: 0.5rem; }
+.hero h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3rem, 8vw, 6rem);
+  letter-spacing: 0.04em; line-height: 0.95;
+  margin-bottom: 20px;
+}
+.hero h1 .line2 { color: var(--accent); display: block; }
+.hero p {
+  color: var(--muted); font-size: 1.05rem;
+  max-width: 480px; margin: 0 auto 32px;
+  line-height: 1.65; font-weight: 300;
+}
+.reset-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); padding: 10px 20px; border-radius: 10px;
+  font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; transition: all 0.2s;
+}
+.reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Main ── */
+main {
+  max-width: 860px; margin: 0 auto;
+  padding: 0 24px 120px;
+  position: relative; z-index: 1;
+}
+
+/* ── Phase block ── */
+.phase {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface);
+  transition: border-color 0.3s;
+}
+.phase.completed { border-color: rgba(34,197,94,0.3); }
+.phase.active { border-color: rgba(249,115,22,0.4); }
+
+.phase-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 24px; cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+.phase-header:hover { background: rgba(255,255,255,0.02); }
+
+.phase-letter {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem;
+  flex-shrink: 0; transition: all 0.3s;
+}
+.phase-letter.orange { background: rgba(249,115,22,0.15); color: var(--accent); border: 1px solid rgba(249,115,22,0.3); }
+.phase-letter.blue   { background: rgba(56,189,248,0.12); color: var(--blue);   border: 1px solid rgba(56,189,248,0.25); }
+.phase-letter.gold   { background: rgba(245,158,11,0.12); color: var(--gold);   border: 1px solid rgba(245,158,11,0.25); }
+.phase-letter.green  { background: rgba(34,197,94,0.12);  color: var(--green);  border: 1px solid rgba(34,197,94,0.25); }
+.phase-letter.purple { background: rgba(168,85,247,0.12); color: #a855f7;       border: 1px solid rgba(168,85,247,0.25); }
+.phase-letter.pink   { background: rgba(236,72,153,0.12); color: #ec4899;       border: 1px solid rgba(236,72,153,0.25); }
+
+.phase-letter.done {
+  background: rgba(34,197,94,0.15) !important;
+  color: var(--green) !important;
+  border-color: rgba(34,197,94,0.4) !important;
+}
+
+.phase-meta { flex: 1; }
+.phase-tag {
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+}
+.phase-title {
+  font-size: 1rem; font-weight: 600; color: var(--text);
+}
+.phase-subtitle { font-size: 0.8rem; color: var(--muted); margin-top: 2px; font-weight: 400; }
+
+.phase-check {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--border); display: flex;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.3s; cursor: pointer;
+  font-size: 0.8rem;
+}
+.phase-check:hover { border-color: var(--green); }
+.phase-check.checked {
+  background: var(--green); border-color: var(--green);
+  color: white;
+}
+
+.phase-arrow {
+  color: var(--muted2); font-size: 0.8rem;
+  transition: transform 0.3s; flex-shrink: 0;
+}
+.phase.open .phase-arrow { transform: rotate(180deg); }
+
+/* ── Phase body ── */
+.phase-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.phase.open .phase-body { max-height: 2000px; }
+
+.phase-content {
+  padding: 0 24px 24px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Steps ── */
+.step {
+  display: flex; gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(35,35,46,0.6);
+  position: relative;
+}
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: var(--muted);
+  flex-shrink: 0; margin-top: 2px;
+}
+
+.step-body { flex: 1; }
+.step-text {
+  font-size: 0.9rem; line-height: 1.65; color: #b0b0c8;
+  font-weight: 400;
+}
+.step-text strong { color: var(--text); font-weight: 600; }
+
+/* ── Step checkbox ── */
+.step-check {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 2px solid var(--border); cursor: pointer;
+  flex-shrink: 0; margin-top: 3px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-size: 0.7rem;
+}
+.step-check:hover { border-color: var(--green); }
+.step-check.checked { background: var(--green); border-color: var(--green); color: white; }
+
+/* ── Link cards ── */
+.link-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px; margin-top: 14px;
+}
+.link-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+  text-decoration: none; color: var(--text);
+  transition: all 0.2s; cursor: pointer;
+}
+.link-card:hover {
+  border-color: var(--accent);
+  background: rgba(249,115,22,0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(249,115,22,0.12);
+}
+.link-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+}
+.link-info { min-width: 0; }
+.link-name { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link-desc { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+
+/* ── Tip box ── */
+.tip {
+  background: rgba(249,115,22,0.07);
+  border: 1px solid rgba(249,115,22,0.2);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px; padding: 12px 16px;
+  margin-top: 14px;
+  font-size: 0.84rem; color: #c0a080; line-height: 1.6;
+}
+.tip strong { color: var(--accent); }
+
+.tip-blue {
+  background: rgba(56,189,248,0.06);
+  border-color: rgba(56,189,248,0.2);
+  border-left-color: var(--blue);
+  color: #80b0c0;
+}
+.tip-blue strong { color: var(--blue); }
+
+.tip-green {
+  background: rgba(34,197,94,0.06);
+  border-color: rgba(34,197,94,0.2);
+  border-left-color: var(--green);
+  color: #80c090;
+}
+.tip-green strong { color: var(--green); }
+
+/* ── CTA to ScriptAI ── */
+.cta-scriptai {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(251,146,60,0.06));
+  border: 1px solid rgba(249,115,22,0.3);
+  border-radius: 14px; padding: 18px 20px; margin-top: 14px;
+  text-decoration: none; color: var(--text);
+  transition: all 0.2s;
+}
+.cta-scriptai:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 32px rgba(249,115,22,0.15);
+  transform: translateY(-2px);
+}
+.cta-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0;
+}
+.cta-info { flex: 1; }
+.cta-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.cta-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+.cta-arrow { color: var(--accent); font-size: 1.1rem; }
+
+/* ── Completion banner ── */
+.completion {
+  display: none; text-align: center;
+  padding: 48px 32px; margin-top: 24px;
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 20px;
+}
+.completion.show { display: block; animation: fadeUp 0.5s ease; }
+.completion-emoji { font-size: 3rem; margin-bottom: 16px; }
+.completion h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem; color: var(--green); letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.completion p { color: var(--muted); font-size: 0.9rem; }
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.phase { animation: fadeUp 0.4s ease both; }
+.phase:nth-child(1) { animation-delay: 0.05s; }
+.phase:nth-child(2) { animation-delay: 0.10s; }
+.phase:nth-child(3) { animation-delay: 0.15s; }
+.phase:nth-child(4) { animation-delay: 0.20s; }
+.phase:nth-child(5) { animation-delay: 0.25s; }
+.phase:nth-child(6) { animation-delay: 0.30s; }
+
+@media (max-width: 600px) {
+  header { padding: 14px 20px; }
+  .progress-bar { width: 100px; }
+  .hero { padding: 60px 20px 40px; }
+  main { padding: 0 16px 80px; }
+  .link-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<!-- Header -->
+<header>
+  <div class="logo">Affiliate<span>FW</span></div>
+  <div class="progress-wrap">
+    <span class="progress-label">Progress</span>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-count" id="progressCount">0/6</span>
+  </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-eyebrow">Shopee Affiliate System</div>
+  <h1>FRAMEWORK<span class="line2">AFFILIATE</span></h1>
+  <p>Panduan lengkap step-by-step dari riset produk viral hingga video siap upload. Centang setiap step yang sudah selesai.</p>
+  <button class="reset-btn" onclick="resetAll()">↺ Reset Semua Centang</button>
+</div>
+
+<!-- Main -->
+<main>
+
+  <!-- A: Riset Produk -->
+  <div class="phase" id="phase-A">
+    <div class="phase-header" onclick="togglePhase('A')">
+      <div class="phase-letter orange" id="letter-A">A</div>
+      <div class="phase-meta">
+        <div class="phase-tag">Langkah Pertama</div>
+        <div class="phase-title">Riset Produk Viral</div>
+        <div class="phase-subtitle">Temukan produk yang lagi trending dan potensial</div>
+      </div>
+      <div class="phase-check" id="check-A" onclick="event.stopPropagation(); togglePhaseCheck('A')"></div>
+      <div class="phase-arrow">▼</div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-content">
+
+        <!-- CSS untuk option cards -->
+        <style>
+        .option-card {
+          background: var(--surface2);
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 16px 18px;
+          margin-bottom: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .option-card:hover { border-color: rgba(249,115,22,0.4); background: rgba(249,115,22,0.04); }
+        .option-card.selected { border-color: var(--accent); background: rgba(249,115,22,0.07); box-shadow: 0 0 0 1px rgba(249,115,22,0.2); }
+        .option-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+        .option-badge { font-size:0.65rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); background:var(--surface); border:1px solid var(--border); padding:3px 9px; border-radius:6px; }
+        .option-card.selected .option-badge { color:var(--accent); border-color:rgba(249,115,22,0.3); background:rgba(249,115,22,0.1); }
+        .option-radio { width:18px; height:18px; border-radius:50%; border:2px solid var(--border); transition:all 0.2s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+        .option-card.selected .option-radio { border-color:var(--accent); background:var(--accent); }
+        .option-card.selected .option-radio::after { content:''; width:6px; height:6px; border-radius:50%; background:white; }
+        .option-title { font-size:0.95rem; font-weight:600; color:var(--text); margin-bottom:6px; }
+        .option-desc { font-size:0.83rem; color:#9090a8; line-height:1.6; }
+        .option-links { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin-top:12px; }
+        </style>
+
+        <div style="margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <div style="height:1px;flex:1;background:var(--border)"></div>
+            <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);padding:4px 12px;border-radius:99px">Pilih Salah Satu Cara Riset</span>
+            <div style="height:1px;flex:1;background:var(--border)"></div>
+          </div>
+
+          <div class="option-card" id="opt-A1" onclick="selectOption('A',1)">
+            <div class="option-header"><div class="option-badge">Opsi 1</div><div class="option-radio" id="radio-A1"></div></div>
+            <div class="option-title">🔥 Flash Sale Shopee</div>
+            <div class="option-desc">Cek produk dengan diskon besar dan volume terjual tinggi — biasanya sedang viral. Cara paling cepat untuk riset.</div>
+            <div class="option-links">
+              <a class="link-card" href="https://shopee.co.id/flash_sale" target="_blank" onclick="event.stopPropagation()">
+                <div class="link-icon" style="background:rgba(249,115,22,0.15)">🔥</div>
+                <div class="link-info"><div class="link-name">Flash Sale</div><div class="link-desc">shopee.co.id</div></div>
+              </a>
+            </div>
+          </div>
+
+          <div class="option-card" id="opt-A2" onclick="selectOption('A',2)">
+            <div class="option-header"><div class="option-badge">Opsi 2</div><div class="option-radio" id="radio-A2"></div></div>
+            <div class="option-title">🔍 Cari by Niche di Shopee</div>
+            <div class="option-desc">Masuk Shopee → cari <strong>niche kamu</strong> → filter produk berlabel <strong>"No. 1 di Kategori"</strong> → sort by Terjual Terbanyak.</div>
+            <div class="tip" style="margin-top:10px">💡 Coba kata kunci: "skincare", "hijab", "cat rumah", dll.</div>
+          </div>
+
+          <div class="option-card" id="opt-A3" onclick="selectOption('A',3)">
+            <div class="option-header"><div class="option-badge">Opsi 3</div><div class="option-radio" id="radio-A3"></div></div>
+            <div class="option-title">🎬 Produk Teratas Kreator</div>
+            <div class="option-desc">Buka <strong>Shopee Live &amp; Video</strong> → klik profil kreator → pilih <strong>Pusat Kreator</strong> → lihat tab <strong>Produk Teratas</strong>.</div>
+            <div class="tip" style="margin-top:10px">💡 Produk yang sering dipakai kreator besar = sudah terbukti convert dan viral.</div>
+          </div>
+
+          <div class="option-card" id="opt-A4" onclick="selectOption('A',4)">
+            <div class="option-header"><div class="option-badge">Opsi 4</div><div class="option-radio" id="radio-A4"></div></div>
+            <div class="option-title">📊 Tools Pihak Ketiga</div>
+            <div class="option-desc">Gunakan tools analitik untuk data lebih akurat — lihat tren penjualan, engagement, dan produk yang sedang naik.</div>
+            <div class="option-links">
+              <a class="link-card" href="https://www.shoplus.net" target="_blank" onclick="event.stopPropagation()">
+                <div class="link-icon" style="background:rgba(56,189,248,0.15)">📊</div>
+                <div class="link-info"><div class="link-name">Shoplus</div><div class="link-desc">Shopee &amp; TikTok</div></div>
+              </a>
+              <a class="link-card" href="https://www.kalodata.com" target="_blank" onclick="event.stopPropagation()">
+                <div class="link-icon" style="background:rgba(168,85,247,0.15)">📈</div>
+                <div class="link-info"><div class="link-name">Kalodata</div><div class="link-desc">Tren penjualan</div></div>
+              </a>
+              <a class="link-card" href="https://www.fastmoss.com" target="_blank" onclick="event.stopPropagation()">
+                <div class="link-icon" style="background:rgba(34,197,94,0.15)">⚡</div>
+                <div class="link-info"><div class="link-name">Fastmoss</div><div class="link-desc">TikTok Shop</div></div>
+              </a>
+              <a class="link-card" href="https://ads.tiktok.com/business/creativecenter/inspiration/popular/hashtag/pc/id" target="_blank" onclick="event.stopPropagation()">
+                <div class="link-icon" style="background:rgba(236,72,153,0.15)">🎵</div>
+                <div class="link-info"><div class="link-name">TikTok Creative</div><div class="link-desc">Hashtag trending</div></div>
+              </a>
+            </div>
+          </div>
+
+          <div style="height:1px;background:var(--border);margin:16px 0"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num" style="background:rgba(249,115,22,0.15);color:var(--accent);border-color:rgba(249,115,22,0.3)">→</div>
+          <div class="step-body">
+            <div class="step-text">Setelah dapat produknya — <strong>simpan gambar produk</strong> (tanpa teks, rasio <strong>9:16</strong>), dan <strong>salin nama produk</strong> beserta deskripsi / keunggulannya.</div>
+            <div class="tip">💡 <strong>Tips:</strong> Kalau gambar ada teksnya, bisa regenerate via AI image generator agar bersih dan siap dipakai untuk video.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Buat Script -->
+  <div class="phase" id="phase-B">
+    <div class="phase-header" onclick="togglePhase('B')">
+      <div class="phase-letter blue" id="letter-B">B</div>
+      <div class="phase-meta">
+        <div class="phase-tag">Langkah Kedua</div>
+        <div class="phase-title">Buat Script Video</div>
+        <div class="phase-subtitle">Generate 5 script voice over siap pakai secara otomatis</div>
+      </div>
+      <div class="phase-check" id="check-B" onclick="event.stopPropagation(); togglePhaseCheck('B')"></div>
+      <div class="phase-arrow">▼</div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-content">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-text">Buka <strong>ScriptAI</strong> — tool generator script affiliate otomatis yang sudah dibuat khusus.</div>
+            <a class="cta-scriptai" href="#" target="_blank" id="scriptai-link">
+              <div class="cta-icon">✦</div>
+              <div class="cta-info">
+                <div class="cta-title">ScriptAI — Generator Script Video</div>
+                <div class="cta-sub">Generate 5 script viral dalam hitungan detik</div>
+              </div>
+              <div class="cta-arrow">→</div>
+            </a>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-text"><strong>Paste judul produk</strong> di kolom Nama Produk, dan paste <strong>keunggulan / deskripsi produk</strong> di kolom Fitur Produk.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-text">Pilih <strong>Gaya Video</strong>, <strong>Gaya Bahasa</strong>, dan <strong>Rumus Script</strong> — atau aktifkan <strong>AI Pick</strong> agar AI pilihkan yang paling viral untuk produkmu.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-text">Klik <strong>Generate 5 Script Video</strong> → pilih script yang paling cocok → copy.</div>
+            <div class="tip tip-blue">💡 <strong>Tips:</strong> Pilih script yang paling terasa natural saat dibaca. Kamu bisa edit sedikit agar lebih personal.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- C: Buat Prompt -->
+  <div class="phase" id="phase-C">
+    <div class="phase-header" onclick="togglePhase('C')">
+      <div class="phase-letter gold" id="letter-C">C</div>
+      <div class="phase-meta">
+        <div class="phase-tag">Langkah Ketiga</div>
+        <div class="phase-title">Buat Prompt Video AI</div>
+        <div class="phase-subtitle">Ubah script menjadi prompt untuk generate video scene by scene</div>
+      </div>
+      <div class="phase-check" id="check-C" onclick="event.stopPropagation(); togglePhaseCheck('C')"></div>
+      <div class="phase-arrow">▼</div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-content">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-text">Paste hasil script ke <strong>ChatGPT</strong> di link berikut untuk dikonversi menjadi prompt video per scene.</div>
+            <div class="link-grid">
+              <a class="link-card" href="https://chatgpt.com/c/69b4b039-5afc-8320-a5a0-a9567b0c1395" target="_blank">
+                <div class="link-icon" style="background:rgba(34,197,94,0.15)">🤖</div>
+                <div class="link-info"><div class="link-name">ChatGPT Prompt</div><div class="link-desc">Konverter script → prompt</div></div>
+              </a>
+            </div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-text">Setelah dapat promptnya, <strong>buka chat baru</strong> di ChatGPT → <strong>upload gambar produk</strong> → paste prompt yang sudah dibuat.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-text">AI akan menghasilkan <strong>3 prompt</strong> untuk Scene 1, Scene 2, Scene 3 — karena kita butuh 3 scene untuk video berdurasi <strong>±16–20 detik</strong>.</div>
+            <div class="tip">💡 <strong>Tips:</strong> Simpan ketiga prompt ini, kamu akan butuhnya di langkah D.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- D: Buat Video -->
+  <div class="phase" id="phase-D">
+    <div class="phase-header" onclick="togglePhase('D')">
+      <div class="phase-letter green" id="letter-D">D</div>
+      <div class="phase-meta">
+        <div class="phase-tag">Langkah Keempat</div>
+        <div class="phase-title">Buat Video dengan AI</div>
+        <div class="phase-subtitle">Generate video scene by scene menggunakan Google Flow</div>
+      </div>
+      <div class="phase-check" id="check-D" onclick="event.stopPropagation(); togglePhaseCheck('D')"></div>
+      <div class="phase-arrow">▼</div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-content">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-text">Buka <strong>Google Flow</strong> — tools AI video generator dari Google.</div>
+            <div class="link-grid">
+              <a class="link-card" href="https://labs.google/fx/tools/flow" target="_blank">
+                <div class="link-icon" style="background:rgba(56,189,248,0.15)">🎬</div>
+                <div class="link-info"><div class="link-name">Google Flow</div><div class="link-desc">labs.google</div></div>
+              </a>
+            </div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-text"><strong>Upload gambar produk</strong> (tanpa teks, 9:16) → paste <strong>Prompt Scene 1</strong> → generate.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-text">Setelah Scene 1 selesai → <strong>klik video Scene 1</strong> → paste <strong>Prompt Scene 2</strong>. Ulangi hingga <strong>Scene 3</strong> selesai.</div>
+            <div class="tip tip-blue">💡 <strong>Tips:</strong> Dengan cara ini setiap scene akan terhubung secara visual dan konsisten satu sama lain.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- E: Ubah Suara -->
+  <div class="phase" id="phase-E">
+    <div class="phase-header" onclick="togglePhase('E')">
+      <div class="phase-letter purple" id="letter-E">E</div>
+      <div class="phase-meta">
+        <div class="phase-tag">Langkah Kelima</div>
+        <div class="phase-title">Generate Voice Over</div>
+        <div class="phase-subtitle">Ubah suara video agar terdengar natural dan profesional</div>
+      </div>
+      <div class="phase-check" id="check-E" onclick="event.stopPropagation(); togglePhaseCheck('E')"></div>
+      <div class="phase-arrow">▼</div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-content">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-text">Jika suara dari Google Flow kurang memuaskan, generate ulang voice over di <strong>ElevenLabs</strong> — paste script voice over yang sudah dibuat.</div>
+            <div class="link-grid">
+              <a class="link-card" href="https://elevenlabs.io" target="_blank">
+                <div class="link-icon" style="background:rgba(168,85,247,0.15)">🎙️</div>
+                <div class="link-info"><div class="link-name">ElevenLabs</div><div class="link-desc">AI Voice Generator</div></div>
+              </a>
+            </div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-text">Pilih suara yang paling sesuai dengan tone produk dan target audiensmu → download file audio.</div>
+            <div class="tip" style="background:rgba(168,85,247,0.07);border-color:rgba(168,85,247,0.2);border-left-color:#a855f7;color:#c0a0e0">
+              💡 <strong style="color:#a855f7">Tips:</strong> Untuk produk fashion/beauty coba suara wanita yang hangat. Untuk produk teknis coba suara yang lebih tegas dan informatif.
+            </div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- F: Edit CapCut -->
+  <div class="phase" id="phase-F">
+    <div class="phase-header" onclick="togglePhase('F')">
+      <div class="phase-letter pink" id="letter-F">F</div>
+      <div class="phase-meta">
+        <div class="phase-tag">Langkah Terakhir</div>
+        <div class="phase-title">Edit & Ekspor di CapCut</div>
+        <div class="phase-subtitle">Gabungkan semua elemen dan ekspor video siap upload</div>
+      </div>
+      <div class="phase-check" id="check-F" onclick="event.stopPropagation(); togglePhaseCheck('F')"></div>
+      <div class="phase-arrow">▼</div>
+    </div>
+    <div class="phase-body">
+      <div class="phase-content">
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-text">Buka <strong>CapCut</strong> → import semua scene video dari Google Flow.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-text">Ganti audio bawaan → masukkan voice over dari <strong>ElevenLabs</strong> → sesuaikan timing dengan video.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-text">Tambahkan <strong>background music</strong> yang ringan agar video terasa lebih menyatu dan profesional. Volume musik sekitar 10–20%.</div>
+            <div class="tip tip-green">💡 <strong>Tips:</strong> Pakai musik instrumental yang tidak ada liriknya agar voice over tetap jelas terdengar.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-text"><strong>Ekspor video</strong> → resolusi 1080p → upload ke Shopee Video / TikTok / Reels dengan link keranjang produk.</div>
+            <div class="tip tip-green">🎯 <strong>Target:</strong> Upload minimal 5 video per hari untuk hasil maksimal.</div>
+          </div>
+          <div class="step-check" onclick="toggleStep(this)"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Completion -->
+  <div class="completion" id="completion">
+    <div class="completion-emoji">🎉</div>
+    <h2>FRAMEWORK SELESAI!</h2>
+    <p>Semua langkah sudah dikerjakan. Saatnya upload dan pantau performa videomu!</p>
+  </div>
+
+</main>
+
+<script>
+const PHASES = ['A','B','C','D','E','F']
+const TOTAL_PHASES = PHASES.length
+
+// Load state
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('afw_state') || '{}') } catch { return {} }
+}
+function saveState(state) {
+  try { localStorage.setItem('afw_state', JSON.stringify(state)) } catch {}
+}
+
+let state = loadState()
+
+// Toggle phase open/close
+function togglePhase(id) {
+  const el = document.getElementById('phase-' + id)
+  el.classList.toggle('open')
+}
+
+// Toggle phase-level checkbox
+function togglePhaseCheck(id) {
+  state['phase_' + id] = !state['phase_' + id]
+  saveState(state)
+  renderPhaseCheck(id)
+  updateProgress()
+}
+
+function renderPhaseCheck(id) {
+  const check = document.getElementById('check-' + id)
+  const letter = document.getElementById('letter-' + id)
+  const phase = document.getElementById('phase-' + id)
+  const done = state['phase_' + id]
+  check.innerHTML = done ? '✓' : ''
+  check.classList.toggle('checked', done)
+  letter.classList.toggle('done', done)
+  phase.classList.toggle('completed', done)
+}
+
+// Toggle step checkbox
+function toggleStep(el) {
+  const key = getStepKey(el)
+  state[key] = !state[key]
+  saveState(state)
+  el.innerHTML = state[key] ? '✓' : ''
+  el.classList.toggle('checked', state[key])
+  updateProgress()
+}
+
+function getStepKey(el) {
+  // Build a key from position
+  const steps = Array.from(document.querySelectorAll('.step-check'))
+  const idx = steps.indexOf(el)
+  return 'step_' + idx
+}
+
+function updateProgress() {
+  const checked = PHASES.filter(p => state['phase_' + p]).length
+  const fill = document.getElementById('progressFill')
+  const count = document.getElementById('progressCount')
+  fill.style.width = (checked / TOTAL_PHASES * 100) + '%'
+  count.textContent = checked + '/' + TOTAL_PHASES
+
+  const completion = document.getElementById('completion')
+  if (checked === TOTAL_PHASES) {
+    completion.classList.add('show')
+    completion.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  } else {
+    completion.classList.remove('show')
+  }
+}
+
+function resetAll() {
+  if (!confirm('Reset semua centang?')) return
+  state = {}
+  saveState(state)
+  // Reset phase checks
+  PHASES.forEach(id => {
+    renderPhaseCheck(id)
+    document.getElementById('phase-' + id).classList.remove('completed', 'active')
+  })
+  // Reset step checks
+  document.querySelectorAll('.step-check').forEach(el => {
+    el.innerHTML = ''
+    el.classList.remove('checked')
+  })
+  updateProgress()
+}
+
+// Init
+function selectOption(phase, num) {
+  // Deselect all options for this phase
+  for (let i = 1; i <= 4; i++) {
+    const card = document.getElementById('opt-' + phase + i)
+    if (card) card.classList.remove('selected')
+  }
+  // Select chosen
+  const chosen = document.getElementById('opt-' + phase + num)
+  if (chosen) chosen.classList.add('selected')
+  // Save
+  state['option_' + phase] = num
+  saveState(state)
+}
+
+function restoreOptions() {
+  ['A'].forEach(phase => {
+    const saved = state['option_' + phase]
+    if (saved) selectOption(phase, saved)
+  })
+}
+
+function init() {
+  // Restore phase checks
+  PHASES.forEach(id => renderPhaseCheck(id))
+  // Restore step checks
+  document.querySelectorAll('.step-check').forEach((el, i) => {
+    const key = 'step_' + i
+    if (state[key]) {
+      el.innerHTML = '✓'
+      el.classList.add('checked')
+    }
+  })
+  restoreOptions()
+  // Open first phase by default
+  document.getElementById('phase-A').classList.add('open')
+  updateProgress()
+}
+
+init()
+</script>
+</body>
+</html>
